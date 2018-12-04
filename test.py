@@ -53,6 +53,7 @@ print('Test labels shape: ', y_test.shape)
 ## let's first do num_interior
 def coding_net(inputs, num_filter=32, num_interior=3):
     """Coding Net for Image to get interior points and moments"""
+    regularizer = tf.contrib.layers.l2_regularizer(scale=0.1)
     # Input Layer
     input_layer = tf.reshape(inputs, [-1,28,28,1])
     # First Convolution layer
@@ -61,6 +62,7 @@ def coding_net(inputs, num_filter=32, num_interior=3):
         filters=num_filter,
         kernel_size=[5, 5],
         padding="same",
+        regularizer=regularizer,
         activation=tf.nn.relu6)
     batch_norm1=tf.layers.batch_normalization(conv1,axis=1)
     pool1 = tf.layers.max_pooling2d(inputs=batch_norm1, pool_size=[2, 2], strides=2)
@@ -72,6 +74,7 @@ def coding_net(inputs, num_filter=32, num_interior=3):
         filters=num_filter*2,
         kernel_size=[5, 5],
         padding="same",
+        regularizer=regularizer,
         activation=tf.nn.relu6)
     batch_norm2=tf.layers.batch_normalization(conv2,axis=1)
     pool2 = tf.layers.max_pooling2d(inputs=batch_norm2, pool_size=[2, 2], strides=2)
@@ -79,7 +82,10 @@ def coding_net(inputs, num_filter=32, num_interior=3):
     
     # Dense layer
     drop2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
-    dense = tf.layers.dense(inputs=drop2_flat, units=1024, activation=tf.nn.relu6)
+    dense = tf.layers.dense(inputs=drop2_flat, 
+                            units=1024, 
+                            regularizer=regularizer,
+                            activation=tf.nn.relu6)
     dropout3 = tf.layers.dropout(inputs=dense, rate=0.4)
     
     # Output position and moments
@@ -138,7 +144,7 @@ def loss(x_points, y_points, images, sigma=2, A=5):
            2*tf.einsum("ki,nti->knt", locations, points) +\
            tf.einsum("ki,nti->knt", tf.ones_like(locations), points**2)
     reduced_dist = tf.reduce_sum(tf.exp(-dist/(2*sigma^2)), axis=2)
-    kernal_loss = tf.reduce_mean(reduced_dist * (A*pixels - 1))
+    kernal_loss = tf.reduce_mean(reduced_dist * (1-A*pixels))
     
     return kernal_loss
 
@@ -151,10 +157,83 @@ coding = coding_net(X)
 x_points,y_points,dull,dulll = reconstruction(coding)
 losses = loss(x_points,y_points,Images)
 
+reg_variables = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+reg_term = tf.contrib.layers.apply_regularization(regularizer, reg_variables)
+losses += reg_term
+
+# def run_model(session, predict, loss_val, Xd, yd,
+#               epochs=1, batch_size=64, print_every=100,
+#               training=None, plot_losses=False):
+#     # have tensorflow compute accuracy
+#     correct_prediction = tf.equal(tf.argmax(predict,1), y)
+#     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    
+#     # shuffle indicies
+#     train_indicies = np.arange(Xd.shape[0])
+#     np.random.shuffle(train_indicies)
+
+#     training_now = training is not None
+    
+#     # setting up variables we want to compute (and optimizing)
+#     # if we have a training function, add that to things we compute
+#     variables = [mean_loss,correct_prediction,accuracy]
+#     if training_now:
+#         variables[-1] = training
+    
+#     # counter 
+#     iter_cnt = 0
+#     for e in range(epochs):
+#         # keep track of losses and accuracy
+#         correct = 0
+#         losses = []
+#         # make sure we iterate over the dataset once
+#         for i in range(int(math.ceil(Xd.shape[0]/batch_size))):
+#             # generate indicies for the batch
+#             start_idx = (i*batch_size)%Xd.shape[0]
+#             idx = train_indicies[start_idx:start_idx+batch_size]
+            
+#             # create a feed dictionary for this batch
+#             feed_dict = {X: Xd[idx,:],
+#                          y: yd[idx],
+#                          is_training: training_now }
+#             # get batch size
+#             actual_batch_size = yd[idx].shape[0]
+            
+#             # have tensorflow compute loss and correct predictions
+#             # and (if given) perform a training step
+#             loss, corr, _ = session.run(variables,feed_dict=feed_dict)
+            
+#             # aggregate performance stats
+#             losses.append(loss*actual_batch_size)
+#             correct += np.sum(corr)
+            
+#             # print every now and then
+#             if training_now and (iter_cnt % print_every) == 0:
+#                 print("Iteration {0}: with minibatch training loss = {1:.3g} and accuracy of {2:.2g}"\
+#                       .format(iter_cnt,loss,np.sum(corr)/actual_batch_size))
+#             iter_cnt += 1
+#         total_correct = correct/Xd.shape[0]
+#         total_loss = np.sum(losses)/Xd.shape[0]
+#         print("Epoch {2}, Overall loss = {0:.3g} and accuracy of {1:.3g}"\
+#               .format(total_loss,total_correct,e+1))
+#         if plot_losses:
+#             plt.plot(losses)
+#             plt.grid(True)
+#             plt.title('Epoch {} Loss'.format(e+1))
+#             plt.xlabel('minibatch number')
+#             plt.ylabel('minibatch loss')
+#             plt.show()
+#     return total_loss,total_correct
+
 with tf.Session() as sess:
-    with tf.device("GPU:0"):
+    with tf.device("/gpu:0"): #"/cpu:0" or "/gpu:0" 
+        # sess.run(tf.global_variables_initializer())
+        # print('Training')
+        # run_model(sess,y_out,mean_loss,X_train,y_train,1,64,100,train_step,True)
+        # print('Validation')
+        # run_model(sess,y_out,mean_loss,X_val,y_val,1,64)
         tf.global_variables_initializer().run()
 
-        sess.run(losses,feed_dict={X:X_train[0:2,:,:],\
-                                   Images:X_train[0:2,:,:]})
-        print(losses)
+        losss = sess.run(losses,feed_dict={X:X_train[0:100,:,:],\
+                                           Images:X_train[0:100,:,:]})
+        print(losss)
