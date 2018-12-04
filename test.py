@@ -144,7 +144,7 @@ def loss(x_points, y_points, images, sigma=0.05, A=5):
     dist = tf.einsum("ki,nti->knt", locations**2, tf.ones_like(points)) -\
            2*tf.einsum("ki,nti->knt", locations, points) +\
            tf.einsum("ki,nti->knt", tf.ones_like(locations), points**2)
-    reduced_dist = tf.reduce_sum(tf.exp(-dist/(2*sigma^2)), axis=2)
+    reduced_dist = tf.reduce_sum(tf.exp(-dist*(0.5*sigma**(-2))), axis=2)
     kernal_loss = tf.reduce_mean(reduced_dist * (1-A*pixels))
     
     return kernal_loss
@@ -159,12 +159,15 @@ x_points,y_points,dull,dulll = reconstruction(coding)
 rloss = loss(x_points,y_points,Images)
 rloss = tf.cast(rloss, tf.float64) + tf.cast(tf.losses.get_regularization_loss(), tf.float64)
 
-optimizer = tf.train.AdamOptimizer(5e-4) # select optimizer and set learning rate
+optimizer = tf.train.AdamOptimizer(5e-3) # select optimizer and set learning rate
 train_step = optimizer.minimize(rloss)
 
-def run_model(session, Xd,
-              epochs=1, batch_size=64, print_every=100):
-    
+def run_model(session, Xd, Xval,
+              epochs=10, batch_size=64, print_every=100):
+
+    train_indicies = np.arange(Xd.shape[0])
+    np.random.shuffle(train_indicies)    
+
     # counter 
     iter_cnt = 0
     for e in range(epochs):
@@ -177,25 +180,26 @@ def run_model(session, Xd,
             idx = train_indicies[start_idx:start_idx+batch_size]
             
             # create a feed dictionary for this batch
-            feed_dict = {X: Xd[idx,:],
-                         Images: Xd[idx]}
+            feed_dict = {X: Xd[idx,:,:],
+                         Images: Xd[idx,:,:]}
             # get batch size
-            actual_batch_size = Images[idx].shape[0]
+            actual_batch_size = Xd[idx,:,:].shape[0]
             
             # have tensorflow compute loss and correct predictions
             # and (if given) perform a training step
-            loss = session.run(rloss,feed_dict=feed_dict)
+            loss, _ = session.run([rloss, train_step],feed_dict=feed_dict)
             
             # aggregate performance stats
             losses.append(loss*actual_batch_size)
-            correct += np.sum(corr)
             
             # print every now and then
             if (iter_cnt % print_every) == 0:
-                print("Iteration {0}: with minibatch training loss = {1:.3g}"\
-                      .format(iter_cnt,loss))
+                feed_dict = {X: Xval[1:1000,:,:],
+                             Images: Xval[1:1000,:,:]}
+                val_loss = session.run(rloss, feed_dict)
+                print("Iteration {0}: with minibatch training loss = {1:.3g} val loss = {2:.3g}"\
+                      .format(iter_cnt,loss, val_loss))
             iter_cnt += 1
-        total_correct = correct/Xd.shape[0]
         total_loss = np.sum(losses)/Xd.shape[0]
         print("Epoch {1}, Overall loss = {0:.3g}"\
               .format(total_loss,e+1))
@@ -205,7 +209,7 @@ with tf.Session() as sess:
     with tf.device("/gpu:0"): #"/cpu:0" or "/gpu:0" 
         sess.run(tf.global_variables_initializer())
         print('Training')
-        run_model(sess,X_train,1,64,100)
+        run_model(sess,X_train,X_val,10,64,100)
         # print('Validation')
         # run_model(sess,X_val,y_val,1,64)
         # tf.global_variables_initializer().run()
