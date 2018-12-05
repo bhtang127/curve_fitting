@@ -159,7 +159,7 @@ x_points,y_points,dull,dulll = reconstruction(coding)
 rloss = loss(x_points,y_points,Images)
 rloss = tf.cast(rloss, tf.float64) + tf.cast(tf.losses.get_regularization_loss(), tf.float64)
 
-optimizer = tf.train.AdamOptimizer(5e-3) # select optimizer and set learning rate
+optimizer = tf.train.AdamOptimizer(1e-3) # select optimizer and set learning rate
 train_step = optimizer.minimize(rloss)
 
 def run_model(session, Xd, Xval,
