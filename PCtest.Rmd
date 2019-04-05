@@ -1,0 +1,55 @@
+---
+title: "principal curve"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Test
+
+```{r data}
+library(dslabs)
+data = read_mnist()
+
+trans.picture = function(pic){
+  if(any(pic < 0)) stop("Not a Valid Picture")
+  pic = pic / sum(pic)
+  
+  N = dim(pic)[1]; M = dim(pic)[2]
+  xys = c(); Q = c()
+  for (i in 1:N) {
+    for (j in 1:M) {
+      if(pic[i,j] > 0){
+        xys = rbind(xys, c(i/N, j/M))
+        Q = c(Q, pic[i,j])
+      }
+    }
+  }
+  
+  list(xys = xys, Q = Q)
+}
+
+```
+
+```{r test}
+library(ggplot2)
+library(magrittr)
+library(princurve)
+
+pic = data$train$images[sample(60000,1),]
+pic = matrix(pic, 28,28)
+image(pic, useRaster = TRUE, col = grey(seq(0, 1, length = 256)), main="Original Picture")
+
+points = trans.picture(pic)
+ind = sample(length(points$Q), 1000, replace = TRUE,prob = points$Q)
+xy = points$xys[sort(ind),]
+
+res = principal_curve(xy)
+plot(res, xlim=c(0,1), ylim=c(0,1))
+
+data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
+  geom_point() + xlim(c(0,1)) + ylim(c(0,1))
+```
+
