@@ -3,8 +3,8 @@ library(splines)
 library(magrittr)
 library(ggplot2)
 library(profvis)
-library(SQUAREM)
 library(dslabs)
+library(OpenImageR)
 
 data = read_mnist()
 
@@ -109,22 +109,21 @@ construct.eta = function(th1, th2, basis, xys){
 
 lp.fit = function(eta, Q){
   N = dim(eta)[1]; M = dim(eta)[2]
-  
+
   gamma = Variable(N, M)
-  P = Variable(M)
   opt = sum(eta * gamma)
   onesN = matrix(1, 1, N)
   onesM = matrix(1, M, 1)
-  constr = list(t(onesN %*% gamma) == P,
-                sum(P) == 1,
+  constr = list(t(onesN %*% gamma) >= (0.001/M),
                 gamma %*% onesM == Q,
                 gamma >= 0)
   prob = Problem(Minimize(opt), constr)
   res = solve(prob)
-  
-  list(status = res$status, 
+
+  P = t(onesN %*% res$getValue(gamma))
+  list(status = res$status,
        gamma = res$getValue(gamma),
-       P = res$getValue(P))
+       P = P)
 }
 
 loss = function(eta, gamma){
@@ -144,6 +143,7 @@ wasserstein.fit = function(init, basis, Q, xys, lambda = 1e-3,
   
   Ps = c(); thetaX = c(); thetaY = c(); losses = c()
   for(it in 1:maxiter){
+    cat("it: ", it, "\r\r")
     eta = construct.eta(theta1, theta2, basis, xys)
     res.lp = lp.fit(eta, Q)
     if(res.lp$status != "optimal") warning("Linear Programing Suboptimal")
@@ -228,14 +228,15 @@ main = function(){
 start = Sys.time()
 
 ind = ceiling(runif(1) * dim(data$train$images)[1])
-pic = matrix(data$train$images[ind,], 28, 28)
+# pic = matrix(data$train$images[ind,], 28, 28)
+pic = yy
 res = trans.picture(pic)
-nump = 100; p = 7
+nump = 200; p = 9
 res2 = init.bs(nump,p, res$xys, res$Q)
 basis = res2$basis
 init = res2$init
 
-fit = wasserstein.fit(init, basis, res$Q, res$xys, lambda = 2e-4, maxiter = 300)
+fit = wasserstein.fit(init, basis, res$Q, res$xys, lambda = 1e-3, maxiter = 10)
 
 par(mfrow=c(2,2))
 image(pic, useRaster = TRUE, col = grey(seq(0, 1, length = 256)), main="Original Picture")
@@ -261,25 +262,3 @@ cat(paste((end - start)/fit$it,"per iteration \n"))
 }
 
 main()
-
-# sp.fit = function(gamma, basis, xys, lambda=1e-3){
-#   gamma[gamma < 0] = 0
-#   N = dim(gamma)[1]; M = dim(gamma)[2]
-#   p = dim(basis)[2]
-#   
-#   theta1 = Variable(p)
-#   theta2 = Variable(p)
-#   X = xys[,1]; Y = xys[,2]
-#   onesN = matrix(1, N, 1)
-#   onesM = matrix(1, 1, M)
-#   basis = matrix(basis, dim(basis)[1], dim(basis)[2])
-#   optX = sum( (X %*% onesM - onesN %*% t(basis %*% theta1))^2 * gamma )
-#   optY = sum( (Y %*% onesM - onesN %*% t(basis %*% theta2))^2 * gamma )
-#   reg = lambda * sum(diff(theta1)^2 + diff(theta2)^2)
-#   prob = Problem(Minimize(optX + optY + reg))
-#   res = solve(prob)
-#   
-#   list(status=res$status,
-#        theta1 = res$getValue(theta1), 
-#        theta2 = res$getValue(theta2))
-# }
