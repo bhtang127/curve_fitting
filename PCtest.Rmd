@@ -10,8 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Test
 
 ```{r data}
-library(dslabs)
-data = read_mnist()
+# library(dslabs)
+# data = read_mnist()
 
 trans.picture = function(pic){
   if(any(pic < 0)) stop("Not a Valid Picture")
@@ -53,32 +53,32 @@ library(magrittr)
 library(princurve)
 library(RDRToolbox)
 
-pic = data$train$images[sample(60000,1),]
-pic = matrix(pic, 28,28)
-image(pic, useRaster = TRUE, col = grey(seq(0, 1, length = 256)), main="Original Picture")
-
-points = trans.picture(pic)
-ind = sample(length(points$Q), 1000, replace = TRUE,prob = points$Q)
-xy = points$xys[sort(ind),]
-
-ind2 = sample(length(points$Q), floor(0.7*length(points$Q)), 
-              replace = FALSE,prob = points$Q)
-xy2 = points$xys[sort(ind2),]
-score = Isomap(xy2, 1, 5)
-hist(score$dim1)
-data.frame(x=xy2[,1],y=xy2[,2],s=c(score$dim1)) %>% 
-  ggplot(aes(x,y,color=s)) +
-  geom_point() + ggtitle("Isomap")
-
-res = principal_curve(xy, smoother = "smooth_spline")
-plot(res, xlim=c(0,1), ylim=c(0,1), main="pc init")
-
-random_start = matrix(runif(dim(xy)[1]*2), dim(xy)[1], 2)
-res2 = principal_curve(xy, start = random_start, smoother = "smooth_spline")
-plot(res2, xlim=c(0,1), ylim=c(0,1), main="rand init")
-
-data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
-  geom_point() + xlim(c(0,1)) + ylim(c(0,1))
+# pic = data$train$images[sample(60000,1),]
+# pic = matrix(pic, 28,28)
+# image(pic, useRaster = TRUE, col = grey(seq(0, 1, length = 256)), main="Original Picture")
+# 
+# points = trans.picture(pic)
+# ind = sample(length(points$Q), 1000, replace = TRUE,prob = points$Q)
+# xy = points$xys[sort(ind),]
+# 
+# ind2 = sample(length(points$Q), floor(0.7*length(points$Q)), 
+#               replace = FALSE,prob = points$Q)
+# xy2 = points$xys[sort(ind2),]
+# score = Isomap(xy2, 1, 5)
+# hist(score$dim1)
+# data.frame(x=xy2[,1],y=xy2[,2],s=c(score$dim1)) %>% 
+#   ggplot(aes(x,y,color=s)) +
+#   geom_point() + ggtitle("Isomap")
+# 
+# res = principal_curve(xy, smoother = "smooth_spline")
+# plot(res, xlim=c(0,1), ylim=c(0,1), main="pc init")
+# 
+# random_start = matrix(runif(dim(xy)[1]*2), dim(xy)[1], 2)
+# res2 = principal_curve(xy, start = random_start, smoother = "smooth_spline")
+# plot(res2, xlim=c(0,1), ylim=c(0,1), main="rand init")
+# 
+# data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
+#   geom_point() + xlim(c(0,1)) + ylim(c(0,1))
 ```
 
 ```{r spiral}
@@ -112,63 +112,63 @@ plot(res2)
 ```
 
 ```{r colon}
-img = readImage("colon.jpg")
-image(img[,,1], useRaster = TRUE, col = grey(seq(0, 1, length = 256)), main="Original Picture")
-points = trans.picture(1-img[,,1])
-xy = points$xys[order(points$Q,decreasing=TRUE),][1:2500,]
-data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
-  geom_point() + xlim(c(0,1)) + ylim(c(0,1))
-
-score = Isomap(xy, 1, 5)
-hist(score$dim1)
-data.frame(x=xy[,1],y=xy[,2],s=c(score$dim1)) %>% 
-  ggplot(aes(x,y,color=s)) +
-  geom_point() + 
-  scale_color_gradientn(colours = rainbow(5)) +
-  ggtitle("Isomap")
-
-xyo = xy[order(score$dim1),]
-spx = smooth.spline(xyo[,1])
-spy = smooth.spline(xyo[,2])
-plot(spx$y, spy$y, type = "l",
-     xlab = "x", ylab = "y",
-     main = "IsoSpline")
-
-res2 = principal_curve(xyo, start = cbind(spx$y, spy$y))
-plot(res2)
+# img = readImage("colon.jpg")
+# image(img[,,1], useRaster = TRUE, col = grey(seq(0, 1, length = 256)), main="Original Picture")
+# points = trans.picture(1-img[,,1])
+# xy = points$xys[order(points$Q,decreasing=TRUE),][1:2500,]
+# data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
+#   geom_point() + xlim(c(0,1)) + ylim(c(0,1))
+# 
+# score = Isomap(xy, 1, 5)
+# hist(score$dim1)
+# data.frame(x=xy[,1],y=xy[,2],s=c(score$dim1)) %>% 
+#   ggplot(aes(x,y,color=s)) +
+#   geom_point() + 
+#   scale_color_gradientn(colours = rainbow(5)) +
+#   ggtitle("Isomap")
+# 
+# xyo = xy[order(score$dim1),]
+# spx = smooth.spline(xyo[,1])
+# spy = smooth.spline(xyo[,2])
+# plot(spx$y, spy$y, type = "l",
+#      xlab = "x", ylab = "y",
+#      main = "IsoSpline")
+# 
+# res2 = principal_curve(xyo, start = cbind(spx$y, spy$y))
+# plot(res2)
 ```
 
 
 ```{r}
-data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
-  geom_point(alpha=0.1) + 
-  geom_point(data=data.frame(x=spx$y,y=spy$y), size=0.2) +
-  xlim(c(0,1)) + ylim(c(0,1))
+# data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
+#   geom_point(alpha=0.1) + 
+#   geom_point(data=data.frame(x=spx$y,y=spy$y), size=0.2) +
+#   xlim(c(0,1)) + ylim(c(0,1))
 ```
 
 
 ```{r break}
-img = readImage("break.jpg")
-image(img[,,1], useRaster = TRUE, col = grey(seq(0, 1, length = 256)), main="Original Picture")
-points = trans.picture(1-img[,,1])
-xy = points$xys[order(points$Q,decreasing=TRUE),][1:2100,]
-data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
-  geom_point() + xlim(c(0,1)) + ylim(c(0,1))
-
-K = 4
-sc = specc(xy, centers=K)
-data.frame(x=xy[,1],y=xy[,2],s=as.factor(sc)) %>% 
-  ggplot(aes(x,y,color=s)) +
-  geom_point() + 
-  ggtitle("Spectral Clustering")
-
-res = c()
-for(i in 1:K){
-  ic = iso_spline(xy[sc==i,])
-  res = rbind(res, ic)
-}
-
-plot(res)
+# img = readImage("break.jpg")
+# image(img[,,1], useRaster = TRUE, col = grey(seq(0, 1, length = 256)), main="Original Picture")
+# points = trans.picture(1-img[,,1])
+# xy = points$xys[order(points$Q,decreasing=TRUE),][1:2100,]
+# data.frame(x=xy[,1], y=xy[,2]) %>% ggplot(aes(x,y)) + 
+#   geom_point() + xlim(c(0,1)) + ylim(c(0,1))
+# 
+# K = 4
+# sc = specc(xy, centers=K)
+# data.frame(x=xy[,1],y=xy[,2],s=as.factor(sc)) %>% 
+#   ggplot(aes(x,y,color=s)) +
+#   geom_point() + 
+#   ggtitle("Spectral Clustering")
+# 
+# res = c()
+# for(i in 1:K){
+#   ic = iso_spline(xy[sc==i,])
+#   res = rbind(res, ic)
+# }
+# 
+# plot(res)
 ```
 
 
@@ -190,26 +190,13 @@ data.frame(x=xy[,1],y=xy[,2],s=c(score$dim1)) %>%
   scale_color_gradientn(colours = rainbow(5)) +
   ggtitle("Isomap")
 
-isp = iso_spline(xy)
-plot(isp, type = "l",
+xyo = xy[order(score$dim1),]
+spx = smooth.spline(xyo[,1])
+spy = smooth.spline(xyo[,2])
+plot(spx$y, spy$y, type = "l",
      xlab = "x", ylab = "y",
      main = "IsoSpline")
 
 res2 = principal_curve(xyo, start = cbind(spx$y, spy$y))
 plot(res2)
-
-K = 5
-sc = specc(xy, centers=K)
-data.frame(x=xy[,1],y=xy[,2],s=as.factor(sc)) %>% 
-  ggplot(aes(x,y,color=s)) +
-  geom_point() + 
-  ggtitle("Spectral Clustering")
-
-res = c()
-for(i in 1:K){
-  ic = iso_spline(xy[sc==i,])
-  res = rbind(res, ic)
-}
-
-plot(res)
 ```
